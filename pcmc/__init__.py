@@ -7,7 +7,7 @@ from pcmc.core import CoinMarketCap
 
 __project__ = 'Pandas CoinMarketCap'
 __package__ = 'pcmc'
-__version__ = '0.1.1'
+__version__ = '0.1.2'
 __license__ = 'MIT'
 __author__ = 'Daniel J. Umpierrez'
 __site__ = 'https://github.com/havocesp/{}'.format(__package__)
