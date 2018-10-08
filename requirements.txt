@@ -1,2 +1,7 @@
-pandas=>24.0.0
-html5lib=>1.01
+requests
+tabulate
+pandas
+ccxt
+begins
+git+https://github.com/havocesp/cryptocmp.git@0.1.1
+
