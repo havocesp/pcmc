@@ -8,6 +8,14 @@
 
 CoinMarketCap Site Scrapper to Pandas Dataframes.
 
+## Installation
+### Using `pip` command
+
+```sh
+# `pip` command by supplying the github project repo URL.
+$ pip install --process-dependencies-link git+https://github.com/havocesp/pcmc
+```
+
 ## Usage
 
 ### CLI
@@ -24,8 +32,9 @@ $ pcmc --timeframe 1h --filter_by gainers hitbtc binance cryptopia
 Project history changes.
 
 ### 0.1.2
-
- - Screen clear for every refresh in loop mode.
+ - Many function documentation added (with some "Doctests").
+ - Added new function to handle cache data.
+ - Screen clear on every update (useful for loop mode).
 
 ### 0.1.1
 
