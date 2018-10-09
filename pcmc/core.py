@@ -36,7 +36,6 @@ def data2nums(d):
     """
     if isinstance(d, str):
         d = d.replace('$', '').replace('%', '').replace('?', '0').replace('*', '').replace(',', '')
-
     try:
         return float(d)
     except ValueError:
