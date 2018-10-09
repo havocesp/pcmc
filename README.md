@@ -1,7 +1,7 @@
 # PCMC
 
  - Author: Daniel J. Umpierez
- - License: MIT
+ - License: UNLICENSE
  - Version: 0.1.2
 
 ## Description
