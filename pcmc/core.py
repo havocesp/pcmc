@@ -8,6 +8,8 @@ import time
 import pandas as pd
 import requests
 
+from pcmc.utils import data2nums
+
 pd.options.display.precision = 8
 
 from cryptocmp import CryptoCmp
@@ -28,26 +30,12 @@ NEW_NAMES = {'Volume (24h)': 'volume24h',
              'Circulating Supply': 'circulating'}
 
 
-def data2nums(d):
-    """
-    String cleaner for some numeric types like percentages or money symbols
-    :param str d:
-    :return str:
-    """
-    if isinstance(d, str):
-        d = d.replace('$', '').replace('%', '').replace('?', '0').replace('*', '').replace(',', '')
-    try:
-        return float(d)
-    except ValueError:
-        return d
-
-
-
+# noinspection PyUnusedFunction
 class CoinMarketCap:
     """
     CoinMarketCap main class.
 
-    >>> CoinMarketCap
+    >>> CoinMarketCap()
     """
 
     @classmethod
@@ -80,7 +68,6 @@ class CoinMarketCap:
                 if response:
                     df_list = pd.read_html(response.text)
             except ValueError as err:
-                # print('[76] ValueError: ', str(err))
                 if response:
                     df_list = pd.read_html(response.text)
             except Exception as err:
@@ -109,7 +96,6 @@ class CoinMarketCap:
 
         return dict(gainers=gainers, losers=losers)
 
-    # noinspection PyUnusedFunction
     @property
     def all(self):
         """
@@ -142,7 +128,6 @@ class CoinMarketCap:
         """
         return self.gainers_and_losers['losers']
 
-    # noinspection PyUnusedFunction
     @property
     def gainers_1h(self):
         """
@@ -153,7 +138,6 @@ class CoinMarketCap:
         hour = self.gainers['1h']  # type: pd.DataFrame
         return hour
 
-    # noinspection PyUnusedFunction
     @property
     def gainers_24h(self):
         """
@@ -163,7 +147,6 @@ class CoinMarketCap:
         """
         return self.gainers['24h']
 
-    # noinspection PyUnusedFunction
     @property
     def gainers_7d(self):
         """
@@ -173,7 +156,6 @@ class CoinMarketCap:
         """
         return self.gainers['7d']
 
-    # noinspection PyUnusedFunction
     @property
     def losers_1h(self):
         """
@@ -183,7 +165,6 @@ class CoinMarketCap:
         """
         return self.losers['1h']
 
-    # noinspection PyUnusedFunction
     @property
     def losers_24h(self):
         """
@@ -193,7 +174,6 @@ class CoinMarketCap:
         """
         return self.losers['24h']
 
-    # noinspection PyUnusedFunction
     @property
     def losers_7d(self):
         """
@@ -203,7 +183,6 @@ class CoinMarketCap:
         """
         return self.losers['7d']
 
-    # noinspection PyUnusedFunction
     @property
     def coins(self):
         """
@@ -225,20 +204,12 @@ class CoinMarketCap:
         data = self._get(url)
         return data.drop('tokens', axis=1).set_index('id').sort_index()
 
-    # noinspection PyUnusedFunction
     @classmethod
     def get_history_data(cls, symbol_slug):
         url = 'https://graphs2.coinmarketcap.com/currencies/{}/'
         return cls._get(url.format(symbol_slug))
 
-    # noinspection PyUnusedFunction
     @classmethod
     def get_history_ohlc(cls, symbol_slug, start, end):
         url = 'https://coinmarketcap.com/currencies/{}/historical-data/?start={}&end={}'
         return cls._get(url.format(symbol_slug, str(start), str(end)))
-
-
-if __name__ == '__main__':
-    cmc = CoinMarketCap()
-    print(cmc.exchanges)
-    # print(cmc.all.sort_values('1h', ascending=False).head())
