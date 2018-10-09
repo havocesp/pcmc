@@ -7,11 +7,13 @@
  - License:     MIT
 """
 import json
+import numbers as nums
 import time
 import typing as tp
 from pathlib import Path
 
 import ccxt
+import term
 from appdirs import AppDirs
 
 HOME = AppDirs('ccxt')
@@ -20,6 +22,54 @@ HOME_LOCAL_SHARE = Path(HOME.user_data_dir)
 
 HOME_CONFIG.mkdir(parents=True, exist_ok=True)
 HOME_LOCAL_SHARE.mkdir(parents=True, exist_ok=True)
+
+
+def cls():
+    """
+    Clear terminal content and move cursor to initial position (row 1, column 1)
+    """
+    term.clear()
+    term.pos(1, 1)
+
+
+wLn = term.writeLine
+
+
+def rg(v, format_spec=None):
+    """
+    Returns "v" as str and red or green ANSI colored depending of its sign (+ green, - red)
+
+    >>> colored_value = rg(0.1)
+    >>> colored_value == '\x1b[32m0.1\x1b[0m\x1b[27m'
+    True
+
+
+    :param nums.Number v: number to be colored
+    :param tp.AnyStr format_spec: format specification (python 3 style)
+    :return str: v as str and red or green ANSI colored depending of its sign (+ green, - red)
+    """
+
+    if v and isinstance(v, str):
+        try:
+            v = float(v)
+        except ValueError:
+            return v
+
+    if v and isinstance(v, nums.Number):
+        v = float(str(v))
+        is_zero = v == 0.0
+        is_neg = v < 0.0
+
+        format_spec = format_spec or '{}'
+        try:
+            v = str(format_spec).format(v)
+        except ValueError:
+            v = '{}'.format(v)
+
+        if is_zero:
+            return term.format(v, term.white, term.dim)
+        else:
+            return term.format(v, term.red if is_neg else term.green)
 
 
 def markets_cache_handler(api):
@@ -86,8 +136,10 @@ def get_last_version(e):
 def get_uniq_currency_list(currencies):
     """
     Returns a sorted and deduped currency list from "currencies" param data.
-    :param tp.Iterable currencies:
-    :return:
+
+    :param tp.Iterable currencies: currencies iterable to be processed.
+
+    :return list: currencies iterable after dedupe and sorted processes.
     """
     currency_lists = list(currencies.values()) if isinstance(currencies, dict) else list(currencies)
     flat_currency_lists = sum(currency_lists, [])
@@ -97,10 +149,11 @@ def get_uniq_currency_list(currencies):
 
 def filter_by_exchanges(data, exchanges):
     """
+    Receive a DataFrame and returns their content filtered by coin listed in "exchanges"
 
-    :param pd.DataFrame data:
-    :param tp.Iterable[tp.AnyStr] exchanges:
-    :return pd.DataFrame:
+    :param pd.DataFrame data: full currencies data DataFrame type
+    :param tp.Iterable[tp.AnyStr] exchanges: exchange names as iterable used for filtering.
+    :return pd.DataFrame: a content filtered by coin listed in "exchanges" DataFrame
     """
     currencies = {e: get_exchange_currencies(e) for e in exchanges}
     all_currencies = get_uniq_currency_list(currencies)
@@ -109,3 +162,22 @@ def filter_by_exchanges(data, exchanges):
     clean = lambda x: x.strip('1234_ ').upper()
     data['exchanges'] = [','.join([clean(e) for e in exchanges if s in currencies[e]]) for s in symbols]
     return data.select(lambda x: x)
+
+
+def data2nums(s):
+    """
+    Try to extract number from str with non numeric chars like "%" or "$" and return it as float type.
+
+    >>> data2nums(' -2.20 % ')
+    -2.2
+    >>> data2nums(' -2.2a0 % ')
+    ' -2.2a0 % '
+
+    :param tp.AnyStr s: the str where to float number will be searched.
+    :return: s as is or float type resulted numeric value extraction from "s" content.
+    :rtype: tp.AnyStr or float
+    """
+    try:
+        return float(str(s or '').strip(' €$%*,').replace('?', '0'))
+    except ValueError:
+        return s
