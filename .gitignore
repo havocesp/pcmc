@@ -2,3 +2,5 @@
 pcmc/toranon.py
 *.egg-info
 pcmc/__pycache__/
+build/
+dist/
