@@ -2,6 +2,5 @@ requests
 tabulate
 pandas
 ccxt
+appdirs
 begins
-git+https://github.com/havocesp/cryptocmp.git@0.1.1
-
