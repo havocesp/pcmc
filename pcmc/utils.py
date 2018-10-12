@@ -1,10 +1,10 @@
 # -*- coding: utf-8 -*-
 """
- PandasCoinMarketCap
+ Pandas CoinMarketCap
 
  - Author:      Daniel J. Umpierrez
  - Created:     09-10-2018
- - License:     MIT
+ - License:     UNLICENSE
 """
 import json
 import numbers as nums
@@ -155,13 +155,17 @@ def filter_by_exchanges(data, exchanges):
     :param tp.Iterable[tp.AnyStr] exchanges: exchange names as iterable used for filtering.
     :return pd.DataFrame: a content filtered by coin listed in "exchanges" DataFrame
     """
-    currencies = {e: get_exchange_currencies(e) for e in exchanges}
-    all_currencies = get_uniq_currency_list(currencies)
-    data = data[[c in all_currencies for c in data.symbol.tolist()]]
-    symbols = data.symbol.tolist()
-    clean = lambda x: x.strip('1234_ ').upper()
-    data['exchanges'] = [','.join([clean(e) for e in exchanges if s in currencies[e]]) for s in symbols]
-    return data.select(lambda x: x)
+    if exchanges and len(list(exchanges)):
+        exchanges = list(exchanges)
+        currencies = {e: get_exchange_currencies(e) for e in exchanges}
+        all_currencies = get_uniq_currency_list(currencies)
+        data = data[[c in all_currencies for c in data.symbol.tolist()]]
+        symbols = data.symbol.tolist()
+        clean = lambda x: x.strip('1234_ ').upper()
+        data['exchanges'] = [','.join([clean(e) for e in exchanges if s in currencies[e]]) for s in symbols]
+        return data.select(lambda x: x)
+    else:
+        return data
 
 
 def data2nums(s):
@@ -178,6 +182,6 @@ def data2nums(s):
     :rtype: tp.AnyStr or float
     """
     try:
-        return float(str(s or '').strip(' €$%*,').replace('?', '0'))
+        return float(str(s or '').strip(' $%*').replace('?', '0').replace(',', ''))
     except ValueError:
         return s
