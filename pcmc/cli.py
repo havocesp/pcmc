@@ -15,7 +15,7 @@ import term
 from begin.utils import tobool
 
 from pcmc import CoinMarketCap
-from pcmc.utils import filter_by_exchanges, get_last_version, cls, wLn
+from pcmc.utils import filter_by_exchanges, get_last_version, cls, wLn, rg
 
 warnings.filterwarnings('ignore')
 
@@ -32,7 +32,9 @@ def main(timeframe='1h', filter_by='gainers', loop=False, loop_interval=60, *exc
     timeframe = timeframe if timeframe in TIMEFRAMES else '1h'
     filter_by = filter_by if filter_by in ['losers', 'gainers'] else 'gainers'
 
-    columns = ['symbol', 'volume24h', 'price', 'btc', timeframe, 'exchanges']
+    columns = ['symbol', 'volume24h', 'price', 'btc', timeframe]
+    if len(exchanges):
+        columns.append('exchanges')
     headers = [c.upper() for c in columns]
     table_settings = dict(headers=headers, stralign='right', numalign='right', disable_numparse=[1, 2, 3])
     rename = dict.fromkeys(columns)
@@ -47,15 +49,16 @@ def main(timeframe='1h', filter_by='gainers', loop=False, loop_interval=60, *exc
 
     while loop or cmd_data is None:
         try:
-            cmd_data = CoinMarketCap().gainers_and_losers
+            data = CoinMarketCap().gainers_and_losers.get(filter_by).get(timeframe)  # type: pd.DataFrame
 
             timestamp_str = str(int(time.time()))
-            snapshots.update({timestamp_str: cmd_data.copy(True)})
+            snapshots.update({timestamp_str: data.copy(True)})
 
-            data = cmd_data[filter_by][timeframe]  # type: pd.DataFrame
+            # data = cmd_data[filter_by][timeframe]
             data['btc'] = data['btc'].apply(lambda x: '{: >12.8f}'.format(x))
-            data[timeframe] = data[timeframe].apply(lambda x: term.format('{: >+7.2f} %'.format(float(x))), term.green)
-            data['price'] = data['price'].apply(lambda x: term.format(format(float(x), ' >9,.3f') + ' $', term.bold))
+
+            data[timeframe] = data[timeframe].apply(lambda x: rg(float(x), '{: >+7.2f} %'))
+            data['price'] = data['price'].apply(lambda x: term.format('{: >9,.3f}'.format(float(x)) + ' $', term.bold))
             data['volume24h'] = data['volume24h'].apply(lambda x: str(format(float(x), ' >12,.0f') + ' $').rjust(15))
 
             final = filter_by_exchanges(data, exchanges)  # type: pd.DataFrame
@@ -67,5 +70,8 @@ def main(timeframe='1h', filter_by='gainers', loop=False, loop_interval=60, *exc
         except KeyboardInterrupt:
             user_exit = True
         finally:
-            if not user_exit and loop:
+
+            if not user_exit:
+                if not loop:
+                    break
                 time.sleep(loop_interval)
