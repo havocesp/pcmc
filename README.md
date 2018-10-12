@@ -13,7 +13,7 @@ CoinMarketCap Site Scrapper to Pandas Dataframes.
 
 ```sh
 # `pip` command by supplying the github project repo URL.
-$ pip install --process-dependencies-link git+https://github.com/havocesp/pcmc
+$ pip install git+https://github.com/havocesp/pcmc
 ```
 
 ## Usage
