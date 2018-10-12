@@ -1,8 +1,8 @@
 # PCMC
 
  - Author: Daniel J. Umpierez
- - License: MIT
- - Version: 0.1.2
+ - License: UNLICENSE
+ - Version: 0.1.3
 
 ## Description
 
@@ -27,9 +27,26 @@ $ pcmc --help
 $ pcmc --timeframe 1h --filter_by gainers hitbtc binance cryptopia
 ```
 
+## Project dependencies.
+ - [appdirs](http://pypi.python.org/pypi/appdirs)
+ - [pandas](https://pypi.org/project/pandas/)
+ - [requests](https://pypi.org/project/requests/)
+ - [ccxt](https://pypi.org/project/ccxt/)
+ - [begins](https://pypi.python.org/pypi/begins)
+
 ## Changelog
 
 Project history changes.
+
+### 0.1.4
+ - New rate extraction  from html code.
+ - New "core" function `extract_rate` for html code rate extraction
+ - `cryptocmp` dependency removed.
+ - Some unused `CoinMarketCap` methods removed.
+ - `__init__` file `__long_description__` error fixed.
+
+### 0.1.3
+ - New `utils.py` module containing `cli.py` functions helpers.
 
 ### 0.1.2
  - Many function documentation added (with some "Doctests").
@@ -40,7 +57,7 @@ Project history changes.
 
  - `pcmc` command added to easy run CLI interface from anywhere.
  - Loop flag and loop interval CLI args added for auto run mode.
- - New BTC price added (calculated from USD one at curren BTC ratio)
+ - New BTC price added (calculated from USD one at current BTC ratio)
 
 ### 0.1.0
 
