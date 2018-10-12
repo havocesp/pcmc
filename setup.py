@@ -23,13 +23,13 @@ setup(
         ]
     },
     url=pcmc.__site__,
+    long_description=pcmc.__long_description__,
+    long_description_content_type="text/markdown",
     license=pcmc.__license__,
     author=pcmc.__author__,
     author_email=pcmc.__email__,
     description=pcmc.__description__,
     keywords=pcmc.__keywords__,
     classifiers=classifiers,
-    install_requires=['requests', 'tabulate', 'pandas', 'ccxt', 'begins'],
-    dependency_links=['https://github.com/havocesp/cryptocmp.git@0.1.1']
-
+    install_requires=pcmc.__dependencies__
 )
