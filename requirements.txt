@@ -1,6 +1,4 @@
-requests
-tabulate
 pandas
-ccxt
-appdirs
-begins
+py-term
+tabulate
+bs4
