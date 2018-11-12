@@ -6,43 +6,48 @@
  - Created:     09-10-2018
  - License:     UNLICENSE
 """
-import json
 import numbers as nums
+import sys
 import time
 import typing as tp
-from pathlib import Path
+import warnings
+from http.client import HTTPException, InvalidURL
+from urllib.request import Request, build_opener, HTTPError
 
-import ccxt
+import pandas as pd
+import pcmc.static as st
 import term
-from appdirs import AppDirs
-
-HOME = AppDirs('ccxt')
-HOME_CONFIG = Path(HOME.user_config_dir)
-HOME_LOCAL_SHARE = Path(HOME.user_data_dir)
-
-HOME_CONFIG.mkdir(parents=True, exist_ok=True)
-HOME_LOCAL_SHARE.mkdir(parents=True, exist_ok=True)
 
 
-def cls():
-    """
-    Clear terminal content and move cursor to initial position (row 1, column 1)
-    """
-    term.clear()
-    term.pos(1, 1)
+# ROOT = AppDirs('ccxt')
+# HOME_CONFIG = Path(ROOT.user_config_dir)
+# HOME_LOCAL_SHARE = Path(ROOT.user_data_dir)
+#
+# HOME_CONFIG.mkdir(parents=True, exist_ok=True)
+# HOME_LOCAL_SHARE.mkdir(parents=True, exist_ok=True)
 
 
-wLn = term.writeLine
+def pandas_settings(precision=8, max_width=120, max_rows=25):
+    pd.options.display.precision = precision
+    pd.options.display.width = max_width
+    pd.options.display.max_rows = max_rows
+    pd.options.display.float_format = lambda v: str(
+        '{:.8f}'.format(v).rstrip('.0') if 0.0 < abs(v) < .1 else '{:,.3f}'.format(v).rstrip(
+            ',.0')) if len(str('{:.8f}'.format(v).rstrip('.0') if 0.0 < abs(v) < .1 else '{:,.3f}'.format(v).rstrip(
+        ',.0'))) else '0'
+    pd.options.display.date_dayfirst = True
+    pd.options.display.colheader_justify = 'center'
+    warnings.filterwarnings(action='ignore', category=FutureWarning)
+    warnings.catch_warnings()
 
 
+# noinspection PySameParameterValue
 def rg(v, format_spec=None):
-    """
-    Returns "v" as str and red or green ANSI colored depending of its sign (+ green, - red)
+    """Returns "v" as str and red or green ANSI colored depending of its sign (+ green, - red).
 
     >>> colored_value = rg(0.1)
     >>> colored_value == '\x1b[32m0.1\x1b[0m\x1b[27m'
     True
-
 
     :param nums.Number v: number to be colored
     :param tp.AnyStr format_spec: format specification (python 3 style)
@@ -61,6 +66,7 @@ def rg(v, format_spec=None):
         is_neg = v < 0.0
 
         format_spec = format_spec or '{}'
+
         try:
             v = str(format_spec).format(v)
         except ValueError:
@@ -72,116 +78,115 @@ def rg(v, format_spec=None):
             return term.format(v, term.red if is_neg else term.green)
 
 
-def markets_cache_handler(api):
-    """
-    Load data from cached file (data is refreshed every 24h)
-
-    :param ccxt.Exchange api:
-    :return dict: markets metadata for exchange name extracted from "api" param.
-    """
-    MARKETS_DIR = HOME_LOCAL_SHARE.joinpath('markets')
-    MARKETS_DIR.mkdir(parents=True, exist_ok=True)
-    DATA_FILE = MARKETS_DIR.joinpath('{}.json'.format(api.id))
-    DATA_FILE.touch(exist_ok=True)
-
-    file_date = DATA_FILE.stat().st_ctime
-    file_size = DATA_FILE.stat().st_size
-
-    ts_now = int(time.time())
-
-    less_than_24h = (ts_now - file_date) < (3600 * 24)
-
-    if file_size > 0 and less_than_24h:
-        raw = DATA_FILE.read_text()
-        data = json.loads(raw)
-        if data and isinstance(data, dict) and len(data) > 0:
-            api.set_markets(dict(data))
-    else:
-        markets = api.load_markets()
-        data = json.dumps(markets, indent=4)
-        DATA_FILE.write_text(data)
-    return api
-
-
-def get_exchange_currencies(exchange):
-    """
-    Returns all supported currencies for "exchange".
-
-    >>> get_exchange_currencies('hitbtc')[:4]
-    ['1ST', 'ABA', 'ABTC', 'ABYSS']
-
-    :param str exchange: exchange name
-    :return list: all supported currencies for "exchange"
-    """
-    e = str(exchange).lower()
-    api = getattr(ccxt, e)({'timeout': 30000})  # type: ccxt.Exchange
-    api.markets = markets_cache_handler(api)
-    split = lambda s: str(s).split('/')
-    currencies = {s[0] for s in map(split, api.symbols)}
-    return list(currencies)
+#
+# def markets_cache_handler(api):
+#     """Load data from cached file (data is refreshed every 24h)
+#
+#     :param ccxt.Exchange api: ccxt Exchange instance
+#     :return dict: markets metadata for exchange name extracted from "api" param.
+#     """
+#     MARKETS_DIR = HOME_LOCAL_SHARE.joinpath('markets')
+#     MARKETS_DIR.mkdir(parents=True, exist_ok=True)
+#     DATA_FILE = MARKETS_DIR.joinpath('{}.json'.format(api.id))
+#     DATA_FILE.touch(exist_ok=True)
+#
+#     file_date = DATA_FILE.stat().st_ctime
+#     file_size = DATA_FILE.stat().st_size
+#
+#     ts_now = int(time.time())
+#
+#     less_than_24h = int(ts_now - file_date) < int(3600 * 24)
+#
+#     if file_size > 0 and less_than_24h:
+#         raw = DATA_FILE.read_text()
+#         data = json.loads(raw)
+#         if data and isinstance(data, dict) and len(data) > 0:
+#             api.set_markets(dict(data))
+#     else:
+#         markets = api.load_markets()
+#         data = json.dumps(markets, indent=4)
+#         DATA_FILE.write_text(data)
+#     return api
 
 
-def get_last_version(e):
-    """
-    Return latest exchange version reference from ccxt exchange list.
-
-    >>> get_last_version('hitbtc')
-    'hitbtc2'
-
-    :return str: latest exchange version name available at "ccxt" lib.
-    """
-    return [x for x in ccxt.exchanges if x.rstrip('123_ ') in e][-1]
-
-
-def get_uniq_currency_list(currencies):
-    """
-    Returns a sorted and deduped currency list from "currencies" param data.
-
-    :param tp.Iterable currencies: currencies iterable to be processed.
-
-    :return list: currencies iterable after dedupe and sorted processes.
-    """
-    currency_lists = list(currencies.values()) if isinstance(currencies, dict) else list(currencies)
-    flat_currency_lists = sum(currency_lists, [])
-    all_currencies = list(set(flat_currency_lists))
-    return list(sorted(all_currencies))
+# def fusit(iterable):
+#     """
+#     Flat Uniq and Sort Iterable (FUSIT)
+#
+#     Returns a sorted and deduped currency list from "currencies" param data.
+#
+#     :param tp.Iterable iterable: currencies iterable to be processed.
+#
+#     :return list: currencies iterable after dedupe and sorted processes.
+#     """
+#     if iterable and isinstance(iterable, tp.Iterable):
+#         if isinstance(iterable, dict):
+#             lists = list(iterable.values())
+#         elif isinstance(iterable, (set, tuple)):
+#             lists = list(iterable)
+#         else:
+#             lists = [iterable]
+#     else:
+#         return list()
+#     flat_list = set(sum(lists, []))
+#     return sorted(flat_list)
 
 
-def filter_by_exchanges(data, exchanges):
-    """
-    Receive a DataFrame and returns their content filtered by coin listed in "exchanges"
+def data2num(s):
+    """Try to extract number from str with non numeric chars like "%" or "$" and return it as float type.
 
-    :param pd.DataFrame data: full currencies data DataFrame type
-    :param tp.Iterable[tp.AnyStr] exchanges: exchange names as iterable used for filtering.
-    :return pd.DataFrame: a content filtered by coin listed in "exchanges" DataFrame
-    """
-    if exchanges and len(list(exchanges)):
-        exchanges = list(exchanges)
-        currencies = {e: get_exchange_currencies(e) for e in exchanges}
-        all_currencies = get_uniq_currency_list(currencies)
-        data = data[[c in all_currencies for c in data.symbol.tolist()]]
-        symbols = data.symbol.tolist()
-        clean = lambda x: x.strip('1234_ ').upper()
-        data['exchanges'] = [','.join([clean(e) for e in exchanges if s in currencies[e]]) for s in symbols]
-        return data.select(lambda x: x)
-    else:
-        return data
-
-
-def data2nums(s):
-    """
-    Try to extract number from str with non numeric chars like "%" or "$" and return it as float type.
-
-    >>> data2nums(' -2.20 % ')
+    >>> data2num(' -2.20 % ')
     -2.2
-    >>> data2nums(' -2.2a0 % ')
+    >>> data2num(' -2.2a0 % ')
     ' -2.2a0 % '
 
     :param tp.AnyStr s: the str where to float number will be searched.
-    :return: s as is or float type resulted numeric value extraction from "s" content.
+    :return: "s" as is or float type resulted numeric value extraction from "s" content.
     :rtype: tp.AnyStr or float
     """
     try:
-        return float(str(s or '').strip(' $%*').replace('?', '0').replace(',', ''))
+        return float(str(s or '').strip(' $%').replace('?', '0').replace(',', '').strip(' *'))
     except ValueError:
         return s
+
+
+def epoch(to_str=False):
+    """Return local datetime (unix epoch).
+
+    :param bool to_str: if True, returned value will converted from int to str.
+    :return int: current datetime integer with amount of seconds since 01-01-2018 (unix epoch).
+    """
+    timestamp = int(time.time())
+    return str(timestamp) if to_str else timestamp
+
+
+def get_url(url, retries=-1, wait_secs=15, verbose=True):
+    """Read URL content and return it as str type.
+
+    :param str url: URL to retrieve as str.
+    :param int retries: max retries, if retries value is negative there is no attempts limit (default -1)
+    :param int wait_secs: sleep time in secs between retries.
+    :param bool verbose: if True all catches errors will be reported to stderr.
+    :return str: raw url content as str type. In case of error, an empty string will be returned.
+    """
+
+    while retries > 0:
+        try:
+            handler = build_opener()
+            request = Request(url, headers=st.HEADERS)
+            response = handler.open(request)
+            response = response.read()
+            return response.decode('utf-8')
+        except InvalidURL:
+            print('{} is not a valid URL'.format(str(url)))
+            return str()
+        except (HTTPException, HTTPError) as err:
+            if verbose:
+                print(str(err), file=sys.stderr)
+                print(' - Retrying', file=sys.stderr)
+            retries -= 1
+            time.sleep(wait_secs)
+        except KeyboardInterrupt:
+            return str()
+        except Exception as err:
+            return str()
