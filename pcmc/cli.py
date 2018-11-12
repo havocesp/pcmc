@@ -4,74 +4,124 @@
  - Created:     05-10-2018
  - GitHub:      https://github.com/havocesp/pcmc
 """
+import argparse
 import collections
+import sys
 import time
 import warnings
 
-import begin
 import pandas as pd
-import tabulate as tbl
+import pcmc.static as st
 import term
-from begin.utils import tobool
-
 from pcmc import CoinMarketCap
-from pcmc.utils import filter_by_exchanges, get_last_version, cls, wLn, rg
+from pcmc.utils import rg, epoch
 
 warnings.filterwarnings('ignore')
 
-TIMEFRAMES = ['1h', '24h', '7d']
 
+def main(*exchanges, **kwargs):
+    timeframe = kwargs.get('timeframe', '1h').lower()
+    filter_by = kwargs.get('filter_by', 'gainers').lower()
+    loop = kwargs.get('loop', False)
+    loop_interval = kwargs.get('loop_interval', 60)
 
-# noinspection PyUnusedFunction
-@begin.start
-@begin.convert(loop_interval=int, loop=tobool)
-def main(timeframe='1h', filter_by='gainers', loop=False, loop_interval=60, *exchanges):
-    timeframe = str(timeframe or '1h').lower()
-    filter_by = str(filter_by or 'gainers').lower()
-
-    timeframe = timeframe if timeframe in TIMEFRAMES else '1h'
+    timeframe = timeframe if timeframe in st.TIMEFRAMES else '1h'
     filter_by = filter_by if filter_by in ['losers', 'gainers'] else 'gainers'
 
-    columns = ['symbol', 'volume24h', 'price', 'btc', timeframe]
+    columns = ['symbol', 'volume24h', 'usd', 'btc', timeframe]
+
     if len(exchanges):
         columns.append('exchanges')
-    headers = [c.upper() for c in columns]
-    table_settings = dict(headers=headers, stralign='right', numalign='right', disable_numparse=[1, 2, 3])
-    rename = dict.fromkeys(columns)
-    for col in columns:
-        rename[col] = '% {}'.format(col.upper()) if col in TIMEFRAMES else col.title()
 
-    exchanges = [get_last_version(e) for e in exchanges if e.rstrip('123_ ') in exchanges]
+    # headers = [c.upper() for c in columns]
+
+    # table_settings = dict(headers=headers, stralign='right', numalign='right', disable_numparse=[1, 2, 3])
+
+    rename = dict.fromkeys(columns)
+
+    for col in columns:
+        rename[col] = '% {}'.format(col.upper()) if col in st.TIMEFRAMES else col.title()
+
     cmd_data = None
     user_exit = False
 
     snapshots = collections.OrderedDict()
 
+    cmc = CoinMarketCap()
+
+    exchange_currencies = {ex: cmc.get_exchange_currencies(ex) for ex in exchanges}
+    all_currencies = list(sorted(set(sum(list(exchange_currencies.values()), []))))
+
     while loop or cmd_data is None:
         try:
-            data = CoinMarketCap().gainers_and_losers.get(filter_by).get(timeframe)  # type: pd.DataFrame
+            data = cmc.gainers if filter_by in 'gainers' else cmc.losers
+            if data:
+                data = data.get(timeframe)
+                data = data.set_index('symbol')  # type: pd.DataFrame
+                data.index.name = 'Symbol'
+            else:
+                continue
 
-            timestamp_str = str(int(time.time()))
-            snapshots.update({timestamp_str: data.copy(True)})
+            snapshots.update({epoch(True): data.copy(True)})
 
-            # data = cmd_data[filter_by][timeframe]
             data['btc'] = data['btc'].apply(lambda x: '{: >12.8f}'.format(x))
 
             data[timeframe] = data[timeframe].apply(lambda x: rg(float(x), '{: >+7.2f} %'))
-            data['price'] = data['price'].apply(lambda x: term.format('{: >9,.3f}'.format(float(x)) + ' $', term.bold))
+            data['usd'] = data['usd'].apply(lambda x: term.format('{: >9,.3f}'.format(float(x)) + ' $', term.bold))
             data['volume24h'] = data['volume24h'].apply(lambda x: str(format(float(x), ' >12,.0f') + ' $').rjust(15))
 
-            final = filter_by_exchanges(data, exchanges)  # type: pd.DataFrame
-            final = final[columns].rename(rename, axis=1)
+            final = data[[c in all_currencies for c in data.index]]
 
-            cls(), wLn(tbl.tabulate(final.to_records(False), **table_settings))
+            final['exchanges'] = [','.join([e.upper() for e in exchanges if s in exchange_currencies[e]]) for s in
+                                  final.index]
+            final = final[columns[1:]].rename(rename, axis=1)
+
+            print(final)
         except IndexError as err:
-            print(type(err), ': ', str(err))
+            user_exit = True
+            raise err
         except KeyboardInterrupt:
             user_exit = True
-        finally:
+        except Exception as err:
+            user_exit = True
+            raise err
 
+        finally:
             if not user_exit:
                 if not loop:
                     break
                 time.sleep(loop_interval)
+
+
+def run():
+    exchanges_list = CoinMarketCap().get_exchanges(True)
+
+    parser = argparse.ArgumentParser()
+
+    parser.add_argument('exchanges',
+                        choices=exchanges_list,
+                        metavar='EX',
+                        nargs='+',
+                        help='Show only currencies supported by supplied exchanges.')
+
+    parser.add_argument('-t', '--timeframe',
+                        default='1h',
+                        help='CoinMarketCap valid timeframes are: 1h, 24h, 7d.')
+
+    parser.add_argument('-f', '--filter_by',
+                        default='gainers',
+                        help='Set to "losers" to show curencies losers data (default "gainers").')
+
+    parser.add_argument('-l', '--loop',
+                        help='Set to "losers" to show curencies losers data (default "gainers").',
+                        action='store_true')
+    parser.add_argument('-i', '--loop-interval',
+                        type=int,
+                        default=60,
+                        help='Set to "losers" to show currencies losers data (default "gainers").')
+
+    args = parser.parse_args(sys.argv[1:])
+    args = vars(args)
+    exchanges = args.pop('exchanges')
+
+    main(*exchanges, **args)
