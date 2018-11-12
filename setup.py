@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
-from setuptools import setup, find_packages
-
 import pcmc
+from setuptools import setup, find_packages
 
 classifiers = [
     'Development Status :: 5 - Production',
@@ -14,12 +13,12 @@ classifiers = [
 exclude = ['.idea*', 'build*', '{}.egg-info*'.format(__package__), 'dist*', 'venv*', 'doc*', 'lab*']
 
 setup(
-    name=pcmc.__project__,
+    name=pcmc.__package__,
     version=pcmc.__version__,
     packages=find_packages(exclude=exclude),
     entry_points={
         'console_scripts': [
-            'pcmc = pcmc.cli:main.start'
+            'pcmc = pcmc.cli:run'
         ]
     },
     url=pcmc.__site__,
