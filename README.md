@@ -2,7 +2,7 @@
 
  - Author: Daniel J. Umpierez
  - License: UNLICENSE
- - Version: 0.1.4
+ - Version: 0.1.5
 
 ## Description
 
@@ -28,15 +28,19 @@ $ pcmc --timeframe 1h --filter_by gainers hitbtc binance cryptopia
 ```
 
 ## Project dependencies.
- - [appdirs](http://pypi.python.org/pypi/appdirs)
  - [pandas](https://pypi.org/project/pandas/)
- - [requests](https://pypi.org/project/requests/)
- - [ccxt](https://pypi.org/project/ccxt/)
- - [begins](https://pypi.python.org/pypi/begins)
+ - [py-term](https://pypi.org/project/py-term)
 
 ## Changelog
 
 Project history changes.
+
+### 0.1.5
+ - Added BeautifulSoap dependence for better scrapping.
+ - Removed ccxt, AppDirs, requests, begins and tabulate dependencies.
+ - Many new methods added to "CoinMarketCap" class
+ - New 'static.py' module to serve as a global constants container.
+ - Fixed error on losers 7d and 24h methods.
 
 ### 0.1.4
  - New rate extraction  from html code.
@@ -65,6 +69,8 @@ Project history changes.
  - "Gainers and Losers" page.
  
 ## TODO
+ - [ ]
+ - [ ] Get symbol list supported by an exchange.
  - [ ] Show diff between refreshes.
  - [x] Retrieve prices in BTC currency.
  - [x] CLI interface.
