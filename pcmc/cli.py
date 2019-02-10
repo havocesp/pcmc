@@ -9,10 +9,12 @@ import collections
 import sys
 import time
 import warnings
+from datetime import datetime as dt
 
 import pandas as pd
-import pcmc.static as st
 import term
+
+import pcmc.static as st
 from pcmc import CoinMarketCap
 from pcmc.utils import rg, epoch
 
@@ -32,10 +34,6 @@ def main(*exchanges, **kwargs):
 
     if len(exchanges):
         columns.append('exchanges')
-
-    # headers = [c.upper() for c in columns]
-
-    # table_settings = dict(headers=headers, stralign='right', numalign='right', disable_numparse=[1, 2, 3])
 
     rename = dict.fromkeys(columns)
 
@@ -77,6 +75,8 @@ def main(*exchanges, **kwargs):
             final = final[columns[1:]].rename(rename, axis=1)
 
             print(final)
+            hour = '{:%H:%M:%S}'.format(dt.now())
+            print('  {sep} {time} {sep}  '.format(sep=str('=' * 38), time=hour))
         except IndexError as err:
             user_exit = True
             raise err
@@ -93,6 +93,7 @@ def main(*exchanges, **kwargs):
                 time.sleep(loop_interval)
 
 
+# noinspection PyUnusedFunction
 def run():
     exchanges_list = CoinMarketCap().get_exchanges(True)
 
@@ -110,10 +111,10 @@ def run():
 
     parser.add_argument('-f', '--filter_by',
                         default='gainers',
-                        help='Set to "losers" to show curencies losers data (default "gainers").')
+                        help='Set to "losers" to show currencies losers data (default "gainers").')
 
     parser.add_argument('-l', '--loop',
-                        help='Set to "losers" to show curencies losers data (default "gainers").',
+                        help='Set to "losers" to show currencies losers data (default "gainers").',
                         action='store_true')
     parser.add_argument('-i', '--loop-interval',
                         type=int,
