@@ -10,6 +10,7 @@ import typing as tp
 
 import bs4
 import pandas as pd
+
 import pcmc.static as st
 from pcmc.utils import data2num, epoch, get_url, pandas_settings
 
@@ -18,7 +19,7 @@ pandas_settings()
 _PATTERN = 'data-{}.+"[0-9]+([\.][0-9])*["]'
 
 
-# noinspection PyUnusedFunction
+# noinspection PyUnusedFunction,PySameParameterValue
 class CoinMarketCap:
     """
     CoinMarketCap main class.
@@ -85,12 +86,12 @@ class CoinMarketCap:
         timeframe = [c[2:] for c in data.columns if c[-1] in ['h', 'd']]
 
         data = data.drop('#', axis=1)
-        data = data.rename(index=str, columns=st.NEW_NAMES)
+        data = data.rename(index=str, columns=st.CoinmaketcapFields.abbr())
         data = data.applymap(data2num)
         # USD price to BTC conversion
         data['btc'] = data['usd'] / cls.get_price('BTC')
 
-        return data[st.GAINERS_LOSERS_FIELDS + timeframe]
+        return data[st.CoinmaketcapFields.gainers() + timeframe]
 
     @property
     def gainers_and_losers(self):
@@ -126,7 +127,8 @@ class CoinMarketCap:
         """
         Returns a DataFrame instance with last hour gainers data.
 
-        >>> CoinMarketCap().gainers_1h
+        >>> type(CoinMarketCap().gainers_1h)
+        <class 'pandas.core.frame.DataFrame'>
 
         :return pd.DataFrame: a DataFrame instance with last hour (1h) gainers data.
         """
@@ -185,11 +187,11 @@ class CoinMarketCap:
         return data[-1] if data and len(data) else pd.DataFrame()
 
     @classmethod
-    def get_price(self, currency):
+    def get_price(cls, currency):
         """
         Extract USD to "currency" rate from html code in "text".
 
-        >>> rate = CoinMarketCap().get_price()
+        >>> rate = CoinMarketCap.get_price('XRP')
         >>> isinstance(rate, float)
         True
 
@@ -197,7 +199,7 @@ class CoinMarketCap:
         :return float: usd to "currency" exchange rate as float.
         """
         currency = str(currency).lower()
-        data = self._fetch_url(st.URL_GAINERS_LOSERS)
+        data = cls._fetch_url(st.URL_GAINERS_LOSERS)
         result = re.search(_PATTERN.format(currency), data)
         if result and hasattr(result, 'span'):
             result = str(result.group())
@@ -266,26 +268,27 @@ class CoinMarketCap:
                 short_name = names_tags[i].text
                 names.update(**{short_name: long_name})
 
-            data = [tr.text.replace('\n\n', '@').replace('\n', '').replace(',', '').replace('$', '').replace('*',
-                                                                                                             '').lstrip(
-                '@12345677890').split('@')[1:8] for tr in table.find_all('tr')]
+            data = [tr.text.replace('\n\n', '@').replace('\n', '').replace('?', '0').replace(',', '').replace('$',
+                                                                                                              '').replace(
+                '*', '').lstrip('@12345677890').split('@')[1:8] for tr in table.find_all('tr')]
 
             final = list()
             for row in list(data):
-                if len(row) > 5:
+                if len(row) >= 7:
                     row = [data2num(r) for r in row]
 
-                    if isinstance(row[-1] or 0, str) and '%' in row[-1] and '?' not in row[-1]:
+                    if isinstance(row[0] or 0, str) and isinstance(row[-1] or 0, str) and len(row[-1]) and len(
+                            row[0]) and '%' in row[-1]:
                         tmp = row[-1].split('%')[:3]
                         row[-1] = float(tmp.pop(0))
                         row.extend(list(map(float, tmp)))
                         if row[0] == row[1]:
-                            row[0] = names.get(row[1])
+                            row[0] = names.get(row[1], '').upper()
                         else:
-                            row[0] = row[0].upper()
+                            row[0] = row[0].upper() if row[0] else row[1]
                         final.append(row)
 
-            df = pd.DataFrame(final, columns=st.ALL_FIELDS)
+            df = pd.DataFrame(final, columns=st.CoinmaketcapFields.all())
 
             df = df[[True if isinstance(data2num(v), float) else False for v in df['volume24h']]]
             df['usd'] = df['usd'].apply(data2num)
@@ -309,8 +312,8 @@ class CoinMarketCap:
         """
         Get exchanges where the supplied currency is currently supported.
 
-        >>> exchanges = cls.get_currency_exchanges('CHAT')
-        >>> isinstance(exchanges, list) and len(exchanges)
+        >>> exchanges = CoinMarketCap.get_currency_exchanges('BCN')
+        >>> len(exchanges) > 0
         True
 
         :param str currency: desired currency used for data request.
@@ -332,27 +335,17 @@ class CoinMarketCap:
         :param bool lower_case: if True, exchange names will be lower cased before return.
         :return list: exchanges listed on CoinMarketCap as list.
         """
-        data = cls._fetch_url(st.URL_EXCHANGES.format(''))
+        data = cls._fetch_url(st.URL_EXCHANGES_ALL)
         data = pd.read_html(data)
+
         df = data.pop(0)  # type: pd.DataFrame
-
-        exchanges = df['Name']
-
-        if lower_case:
-            exchanges = exchanges.apply(str.lower)
-
-        return exchanges.tolist()
-
-#
-# if __name__ == '__main__':
-#     CMC = CoinMarketCap
-#     exchanges = CMC.get_currency_exchanges('XRP')
-#     data = CMC.get_all()
-#     binance_currencies = CMC.get_exchange_currencies('binance')
-#     hitbtc_currencies = CMC.get_exchange_currencies('hitbtc')
-#     cryptopia_currencies = CMC.get_exchange_currencies('cryptopia')
-#     all_currencies = sorted(set(hitbtc_currencies + binance_currencies + cryptopia_currencies))
-#
-#     print(data.sort_values(['1h'], ascending=False))
-#     # print(data.sort_values(['24h'], ascending=False))
-#     # print(CMC.get_currency_exchanges('CHAT'))
+        col0 = df[0].tolist()
+        drop_values = ['view more', 'total']
+        full_list = list()
+        for row in map(str.lower, col0):
+            row = row.strip()
+            if len(row) > 2 and row not in drop_values:
+                row = row.split('.')[1:]
+                row = ''.join(row).strip()
+                full_list.append(row.replace(' ', '-'))
+        return full_list
