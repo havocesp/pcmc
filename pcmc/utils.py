@@ -12,11 +12,13 @@ import time
 import typing as tp
 import warnings
 from http.client import HTTPException, InvalidURL
-from urllib.request import Request, build_opener, HTTPError
+from urllib.error import HTTPError
+from urllib.request import Request, build_opener
 
 import pandas as pd
-import pcmc.static as st
 import term
+
+import pcmc.static as st
 
 
 # ROOT = AppDirs('ccxt')
@@ -31,10 +33,9 @@ def pandas_settings(precision=8, max_width=120, max_rows=25):
     pd.options.display.precision = precision
     pd.options.display.width = max_width
     pd.options.display.max_rows = max_rows
-    pd.options.display.float_format = lambda v: str(
-        '{:.8f}'.format(v).rstrip('.0') if 0.0 < abs(v) < .1 else '{:,.3f}'.format(v).rstrip(
-            ',.0')) if len(str('{:.8f}'.format(v).rstrip('.0') if 0.0 < abs(v) < .1 else '{:,.3f}'.format(v).rstrip(
-        ',.0'))) else '0'
+    fmt = lambda s, f='{:.8f}', stp=',.0': f.format(s).rstrip(stp)
+    range_fmt = lambda v: fmt(v, stp='.0') if 0.0 < abs(v) < .1 else fmt(v, '{:,.3f}')
+    pd.options.display.float_format = lambda v: range_fmt(v) if len(range_fmt(v)) else '0'
     pd.options.display.date_dayfirst = True
     pd.options.display.colheader_justify = 'center'
     warnings.filterwarnings(action='ignore', category=FutureWarning)
@@ -78,60 +79,6 @@ def rg(v, format_spec=None):
             return term.format(v, term.red if is_neg else term.green)
 
 
-#
-# def markets_cache_handler(api):
-#     """Load data from cached file (data is refreshed every 24h)
-#
-#     :param ccxt.Exchange api: ccxt Exchange instance
-#     :return dict: markets metadata for exchange name extracted from "api" param.
-#     """
-#     MARKETS_DIR = HOME_LOCAL_SHARE.joinpath('markets')
-#     MARKETS_DIR.mkdir(parents=True, exist_ok=True)
-#     DATA_FILE = MARKETS_DIR.joinpath('{}.json'.format(api.id))
-#     DATA_FILE.touch(exist_ok=True)
-#
-#     file_date = DATA_FILE.stat().st_ctime
-#     file_size = DATA_FILE.stat().st_size
-#
-#     ts_now = int(time.time())
-#
-#     less_than_24h = int(ts_now - file_date) < int(3600 * 24)
-#
-#     if file_size > 0 and less_than_24h:
-#         raw = DATA_FILE.read_text()
-#         data = json.loads(raw)
-#         if data and isinstance(data, dict) and len(data) > 0:
-#             api.set_markets(dict(data))
-#     else:
-#         markets = api.load_markets()
-#         data = json.dumps(markets, indent=4)
-#         DATA_FILE.write_text(data)
-#     return api
-
-
-# def fusit(iterable):
-#     """
-#     Flat Uniq and Sort Iterable (FUSIT)
-#
-#     Returns a sorted and deduped currency list from "currencies" param data.
-#
-#     :param tp.Iterable iterable: currencies iterable to be processed.
-#
-#     :return list: currencies iterable after dedupe and sorted processes.
-#     """
-#     if iterable and isinstance(iterable, tp.Iterable):
-#         if isinstance(iterable, dict):
-#             lists = list(iterable.values())
-#         elif isinstance(iterable, (set, tuple)):
-#             lists = list(iterable)
-#         else:
-#             lists = [iterable]
-#     else:
-#         return list()
-#     flat_list = set(sum(lists, []))
-#     return sorted(flat_list)
-
-
 def data2num(s):
     """Try to extract number from str with non numeric chars like "%" or "$" and return it as float type.
 
@@ -150,6 +97,7 @@ def data2num(s):
         return s
 
 
+# noinspection PySameParameterValue
 def epoch(to_str=False):
     """Return local datetime (unix epoch).
 
@@ -188,5 +136,5 @@ def get_url(url, retries=-1, wait_secs=15, verbose=True):
             time.sleep(wait_secs)
         except KeyboardInterrupt:
             return str()
-        except Exception as err:
-            return str()
+        except IOError as err:
+            return str(err)
