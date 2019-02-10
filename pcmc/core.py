@@ -1,6 +1,6 @@
 # -*- coding:utf-8 -*-
-"""
-Core module
+"""Core module.
+
  - Author:      Daniel J. Umpierrez
  - Created:     05-10-2018
  - GitHub:      https://github.com/havocesp/pcmc
@@ -16,13 +16,11 @@ from pcmc.utils import data2num, epoch, get_url, pandas_settings
 
 pandas_settings()
 
-_PATTERN = 'data-{}.+"[0-9]+([\.][0-9])*["]'
+_PATTERN = r'data-{}.+"[0-9]+([\.][0-9])*["]'
 
 
-# noinspection PyUnusedFunction,PySameParameterValue
 class CoinMarketCap:
-    """
-    CoinMarketCap main class.
+    """CoinMarketCap main class.
 
     >>> gainers_1h = CoinMarketCap().gainers_1h
     >>> type(gainers_1h)
@@ -37,8 +35,7 @@ class CoinMarketCap:
 
     @classmethod
     def _fetch_url(cls, url, retries=5):
-        """
-        Fetch url then return its content (after save it on cache).
+        """Fetch url then return its content (after save it on cache).
 
         :param str url: URL to fetch.
         :return str: raw URL content as str.
@@ -46,7 +43,7 @@ class CoinMarketCap:
         if url not in cls._cache or epoch() - cls._cache.get(url).get('updated', 0.0) > 3:
             cls._cache.update({
                 url: {
-                    'data': get_url(url, retries, 10),
+                    'data':    get_url(url, retries, 10),
                     'updated': epoch()
                 }
             })
@@ -54,8 +51,7 @@ class CoinMarketCap:
 
     @classmethod
     def _scrapper(cls, url, match=None):
-        """
-        CoinMarketCap site scrapper.
+        """CoinMarketCap site scrapper.
 
         Once URL fetching process is done, is fetched reading done site scrap code as str,  parse every HTML table DataFrame from HTML table data enclosed inside HTML table tags and  found in URL, a pandas DataFrame is generated  by processing enclosed data its  HTML table data for every HTML table found and finally a list instance will be returned containing one DataFrame  (html table a pandas DataFrame
 
@@ -75,8 +71,7 @@ class CoinMarketCap:
 
     @classmethod
     def _data_handler(cls, data):
-        """
-        Do some data processing with columns (formatting, currency conversion, remove unnecessary data, ...)
+        """Do some data processing with columns (formatting, currency conversion, remove unnecessary data, ...)
 
         :param pd.DataFrame data: DataFrame to be processed.
         :return pd.DataFrame: resulting data.
@@ -106,8 +101,7 @@ class CoinMarketCap:
 
     @property
     def gainers(self):
-        """
-        Return gainers data as dict with 1h, 24h and 7d keys with respective data as DataFrames.
+        """Return gainers data as dict with 1h, 24h and 7d keys with respective data as DataFrames.
 
         :return dict: gainers data as dict with 1h, 24h and 7d keys with respective data as DataFrames.
         """
@@ -115,8 +109,7 @@ class CoinMarketCap:
 
     @property
     def losers(self):
-        """
-        Return dict with losers "1h", "24h" and "7d" DataFrames.
+        """Return dict with losers "1h", "24h" and "7d" DataFrames.
 
         :return dict: losers data as dict with 1h, 24h and 7d keys with respective data as DataFrames.
         """
@@ -124,8 +117,7 @@ class CoinMarketCap:
 
     @property
     def gainers_1h(self):
-        """
-        Returns a DataFrame instance with last hour gainers data.
+        """Returns a DataFrame instance with last hour gainers data.
 
         >>> type(CoinMarketCap().gainers_1h)
         <class 'pandas.core.frame.DataFrame'>
@@ -137,8 +129,7 @@ class CoinMarketCap:
 
     @property
     def gainers_24h(self):
-        """
-        Returns a DataFrame instance with last day gainers data.
+        """Returns a DataFrame instance with last day gainers data.
 
         :return pd.DataFrame: a DataFrame instance with last day (24h) gainers data.
         """
@@ -147,8 +138,7 @@ class CoinMarketCap:
 
     @property
     def gainers_7d(self):
-        """
-        Returns a DataFrame instance with last week gainers data.
+        """Returns a DataFrame instance with last week gainers data.
 
         :return pd.DataFrame: a DataFrame instance with last week (7d) gainers data.
         """
@@ -157,8 +147,7 @@ class CoinMarketCap:
 
     @property
     def losers_1h(self):
-        """
-        Returns a DataFrame instance with last hour losers data.
+        """Returns a DataFrame instance with last hour losers data.
 
         :return pd.DataFrame: a DataFrame instance with last hour (1h) losers data.
         """
@@ -168,8 +157,7 @@ class CoinMarketCap:
     #
     @property
     def losers_24h(self):
-        """
-        Returns a DataFrame instance with last day losers data.
+        """Returns a DataFrame instance with last day losers data.
 
         :return pd.DataFrame: a DataFrame instance with last day (24h) losers data.
         """
@@ -188,8 +176,7 @@ class CoinMarketCap:
 
     @classmethod
     def get_price(cls, currency):
-        """
-        Extract USD to "currency" rate from html code in "text".
+        """Extract USD to "currency" rate from html code in "text".
 
         >>> rate = CoinMarketCap.get_price('XRP')
         >>> isinstance(rate, float)
@@ -210,8 +197,7 @@ class CoinMarketCap:
 
     @classmethod
     def get_exchange_symbols(cls, exchange, quote_currency=None):
-        """
-        Get symbol supported by a given exchange (optionally filtered by a base market)
+        """Get symbol supported by a given exchange (optionally filtered by a base market)
 
         :param str exchange: exchange name used on request.
         :param str quote_currency: only symbols matching "quote_currency" value will be returned.
@@ -244,8 +230,7 @@ class CoinMarketCap:
 
     @classmethod
     def get_markets_by(cls, exchange):
-        """
-        Get exchange supported markets as list.
+        """Get exchange supported markets as list.
 
         :param str exchange: exchange name used on request.
         :return list: exchange supported markets as list.
@@ -270,7 +255,7 @@ class CoinMarketCap:
 
             data = [tr.text.replace('\n\n', '@').replace('\n', '').replace('?', '0').replace(',', '').replace('$',
                                                                                                               '').replace(
-                '*', '').lstrip('@12345677890').split('@')[1:8] for tr in table.find_all('tr')]
+                    '*', '').lstrip('@12345677890').split('@')[1:8] for tr in table.find_all('tr')]
 
             final = list()
             for row in list(data):
@@ -309,8 +294,7 @@ class CoinMarketCap:
 
     @classmethod
     def get_currency_exchanges(cls, currency):
-        """
-        Get exchanges where the supplied currency is currently supported.
+        """Get exchanges where the supplied currency is currently supported.
 
         >>> exchanges = CoinMarketCap.get_currency_exchanges('BCN')
         >>> len(exchanges) > 0
@@ -329,8 +313,7 @@ class CoinMarketCap:
 
     @classmethod
     def get_exchanges(cls, lower_case=False):
-        """
-        Get all exchanges listed on CoinMarketCap.
+        """Get all exchanges listed on CoinMarketCap.
 
         :param bool lower_case: if True, exchange names will be lower cased before return.
         :return list: exchanges listed on CoinMarketCap as list.
@@ -348,4 +331,4 @@ class CoinMarketCap:
                 row = row.split('.')[1:]
                 row = ''.join(row).strip()
                 full_list.append(row.replace(' ', '-'))
-        return full_list
+        return [e.lower() if lower_case else e for e in full_list]

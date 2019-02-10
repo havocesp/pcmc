@@ -1,6 +1,5 @@
 # -*- coding: utf-8 -*-
-"""
- Pandas CoinMarketCap
+"""Utils module.
 
  - Author:      Daniel J. Umpierrez
  - Created:     09-10-2018
@@ -21,17 +20,15 @@ import term
 import pcmc.static as st
 
 
-# ROOT = AppDirs('ccxt')
-# HOME_CONFIG = Path(ROOT.user_config_dir)
-# HOME_LOCAL_SHARE = Path(ROOT.user_data_dir)
-#
-# HOME_CONFIG.mkdir(parents=True, exist_ok=True)
-# HOME_LOCAL_SHARE.mkdir(parents=True, exist_ok=True)
+def pandas_settings(precision=8, max_cols=120, max_rows=25):
+    """Pandas settings handler.
 
-
-def pandas_settings(precision=8, max_width=120, max_rows=25):
+    :param int precision: sets max decimals after 'dot' for "float" type or similar.
+    :param int max_cols: amount of chars per line limiter.
+    :param int max_rows: amount lines limiter
+    """
     pd.options.display.precision = precision
-    pd.options.display.width = max_width
+    pd.options.display.width = max_cols
     pd.options.display.max_rows = max_rows
     fmt = lambda s, f='{:.8f}', stp=',.0': f.format(s).rstrip(stp)
     range_fmt = lambda v: fmt(v, stp='.0') if 0.0 < abs(v) < .1 else fmt(v, '{:,.3f}')
@@ -42,7 +39,6 @@ def pandas_settings(precision=8, max_width=120, max_rows=25):
     warnings.catch_warnings()
 
 
-# noinspection PySameParameterValue
 def rg(v, format_spec=None):
     """Returns "v" as str and red or green ANSI colored depending of its sign (+ green, - red).
 
@@ -97,7 +93,6 @@ def data2num(s):
         return s
 
 
-# noinspection PySameParameterValue
 def epoch(to_str=False):
     """Return local datetime (unix epoch).
 

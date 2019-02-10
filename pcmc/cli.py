@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
-"""
+"""CLI module.
+
  - Author:      Daniel J. Umpierrez
  - Created:     05-10-2018
  - GitHub:      https://github.com/havocesp/pcmc

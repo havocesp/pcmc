@@ -1,6 +1,5 @@
 # -*- coding: utf-8 -*-
-"""
- Static data for global use.
+"""Static data (constants)
 
  - Author:      Daniel J. Umpierrez
  - Created:     31-10-2018
@@ -53,7 +52,6 @@ class CoinmaketcapFields:
                 '% 7d':               cls.percent_change_7d}
 
 
-# ['name', 'symbol', 'market_cap', 'usd', 'circulating', 'volume24h', '1h', '24h', '7d']
 TIMEFRAMES = ['1h', '24h', '7d']
 URL_BASE = 'http://coinmarketcap.com/{}'
 # URL_BINANCE_TICKER = 'https://api.binance.com/api/v1/ticker/allPrices'
@@ -65,7 +63,7 @@ URL_CURRENCIES = URL_BASE.format('currencies/{}/#markets')
 
 USER_AGENT = 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/69.0.3497.81 Safari/537.36'
 
-HEADERS = {'Referer': URL_GAINERS_LOSERS,
+HEADERS = {'Referer':       URL_GAINERS_LOSERS,
            'Cache-Control': 'no-cache',
-           'Pragma': 'no-cache',
-           'User-Agent': USER_AGENT}
+           'Pragma':        'no-cache',
+           'User-Agent':    USER_AGENT}

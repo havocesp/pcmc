@@ -1,8 +1,8 @@
 # PCMC
 
- - Author: Daniel J. Umpierez
+ - Author: Daniel J. Umpierrez
  - License: UNLICENSE
- - Version: 0.1.5
+ - Version: 0.1.6
 
 ## Description
 
@@ -34,6 +34,10 @@ $ pcmc --timeframe 1h --filter_by gainers hitbtc binance cryptopia
 ## Changelog
 
 Project history changes.
+
+### 0.1.6
+ - New CoinMarketCap class on static.py
+ - Some code tidy task accomplished and some typo fixing.
 
 ### 0.1.5
  - Added BeautifulSoap dependence for better scrapping.
