@@ -12,13 +12,14 @@ import bs4
 import pandas as pd
 
 import pcmc.static as st
-from pcmc.utils import data2num, epoch, get_url, pandas_settings
+from pcmc.utils import data2num, epoch, get_url, pandas_settings, str_subs
 
 pandas_settings()
 
 _PATTERN = r'data-{}.+"[0-9]+([\.][0-9])*["]'
 
 
+# noinspection PyUnusedFunction,PySameParameterValue
 class CoinMarketCap:
     """CoinMarketCap main class.
 
@@ -43,7 +44,7 @@ class CoinMarketCap:
         if url not in cls._cache or epoch() - cls._cache.get(url).get('updated', 0.0) > 3:
             cls._cache.update({
                 url: {
-                    'data':    get_url(url, retries, 10),
+                    'data': get_url(url, retries, 10),
                     'updated': epoch()
                 }
             })
@@ -81,12 +82,12 @@ class CoinMarketCap:
         timeframe = [c[2:] for c in data.columns if c[-1] in ['h', 'd']]
 
         data = data.drop('#', axis=1)
-        data = data.rename(index=str, columns=st.CoinmaketcapFields.abbr())
+        data = data.rename(index=str, columns=st.NEW_NAMES)
         data = data.applymap(data2num)
         # USD price to BTC conversion
         data['btc'] = data['usd'] / cls.get_price('BTC')
 
-        return data[st.CoinmaketcapFields.gainers() + timeframe]
+        return data[st.GAINERS_LOSERS_FIELDS + timeframe]
 
     @property
     def gainers_and_losers(self):
@@ -253,17 +254,15 @@ class CoinMarketCap:
                 short_name = names_tags[i].text
                 names.update(**{short_name: long_name})
 
-            data = [tr.text.replace('\n\n', '@').replace('\n', '').replace('?', '0').replace(',', '').replace('$',
-                                                                                                              '').replace(
-                    '*', '').lstrip('@12345677890').split('@')[1:8] for tr in table.find_all('tr')]
+            replaces = (('\n\n', '@'), ('\n',), ('?', '0'), (',',), ('$',), ('*',))
+            data = [str_subs(tr.text, replaces).lstrip('@12345677890').split('@')[1:8] for tr in table.find_all('tr')]
 
             final = list()
-            for row in list(data):
-                if len(row) >= 7:
+            for row in data:
+                if len(row) > 5:
                     row = [data2num(r) for r in row]
 
-                    if isinstance(row[0] or 0, str) and isinstance(row[-1] or 0, str) and len(row[-1]) and len(
-                            row[0]) and '%' in row[-1]:
+                    if isinstance(row[-1] or 0, str) and '%' in row[-1] and '?' not in row[-1]:
                         tmp = row[-1].split('%')[:3]
                         row[-1] = float(tmp.pop(0))
                         row.extend(list(map(float, tmp)))
@@ -273,7 +272,7 @@ class CoinMarketCap:
                             row[0] = row[0].upper() if row[0] else row[1]
                         final.append(row)
 
-            df = pd.DataFrame(final, columns=st.CoinmaketcapFields.all())
+            df = pd.DataFrame(final, columns=st.ALL_FIELDS)
 
             df = df[[True if isinstance(data2num(v), float) else False for v in df['volume24h']]]
             df['usd'] = df['usd'].apply(data2num)
@@ -296,8 +295,8 @@ class CoinMarketCap:
     def get_currency_exchanges(cls, currency):
         """Get exchanges where the supplied currency is currently supported.
 
-        >>> exchanges = CoinMarketCap.get_currency_exchanges('BCN')
-        >>> len(exchanges) > 0
+        >>> exchanges = cls.get_currency_exchanges('CHAT')
+        >>> isinstance(exchanges, list) and len(exchanges)
         True
 
         :param str currency: desired currency used for data request.
@@ -318,17 +317,14 @@ class CoinMarketCap:
         :param bool lower_case: if True, exchange names will be lower cased before return.
         :return list: exchanges listed on CoinMarketCap as list.
         """
-        data = cls._fetch_url(st.URL_EXCHANGES_ALL)
+        data = cls._fetch_url(st.URL_EXCHANGES.format(''))
         data = pd.read_html(data)
 
         df = data.pop(0)  # type: pd.DataFrame
-        col0 = df[0].tolist()
-        drop_values = ['view more', 'total']
-        full_list = list()
-        for row in map(str.lower, col0):
-            row = row.strip()
-            if len(row) > 2 and row not in drop_values:
-                row = row.split('.')[1:]
-                row = ''.join(row).strip()
-                full_list.append(row.replace(' ', '-'))
-        return [e.lower() if lower_case else e for e in full_list]
+
+        exchanges = df['Name']
+
+        if lower_case:
+            exchanges = exchanges.apply(str.lower)
+
+        return exchanges.tolist()
