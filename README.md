@@ -2,7 +2,7 @@
 
  - Author: Daniel J. Umpierrez
  - License: UNLICENSE
- - Version: 0.1.6
+ - Version: 0.1.7
 
 ## Description
 
@@ -34,6 +34,9 @@ $ pcmc --timeframe 1h --filter_by gainers hitbtc binance cryptopia
 ## Changelog
 
 Project history changes.
+
+### 0.1.7
+ - Code cleanup (less lines, same result and more readable code)
 
 ### 0.1.6
  - New CoinMarketCap class on static.py
@@ -73,7 +76,7 @@ Project history changes.
  - "Gainers and Losers" page.
  
 ## TODO
- - [ ]
+ - [ ] Coinmarketcap custom "watchlist" page interaction.
  - [ ] Get symbol list supported by an exchange.
  - [ ] Show diff between refreshes.
  - [x] Retrieve prices in BTC currency.
