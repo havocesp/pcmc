@@ -11,8 +11,7 @@ import time
 import typing as tp
 import warnings
 from http.client import HTTPException, InvalidURL
-from urllib.error import HTTPError
-from urllib.request import Request, build_opener
+from urllib.request import Request, build_opener, HTTPError
 
 import pandas as pd
 import term
@@ -20,7 +19,7 @@ import term
 import pcmc.static as st
 
 
-def pandas_settings(precision=8, max_cols=120, max_rows=25):
+def pandas_settings(precision=8, max_width=120, max_rows=25):
     """Pandas settings handler.
 
     :param int precision: sets max decimals after 'dot' for "float" type or similar.
@@ -28,17 +27,23 @@ def pandas_settings(precision=8, max_cols=120, max_rows=25):
     :param int max_rows: amount lines limiter
     """
     pd.options.display.precision = precision
-    pd.options.display.width = max_cols
+    pd.options.display.width = max_width
     pd.options.display.max_rows = max_rows
-    fmt = lambda s, f='{:.8f}', stp=',.0': f.format(s).rstrip(stp)
-    range_fmt = lambda v: fmt(v, stp='.0') if 0.0 < abs(v) < .1 else fmt(v, '{:,.3f}')
-    pd.options.display.float_format = lambda v: range_fmt(v) if len(range_fmt(v)) else '0'
+    in_range = lambda v: f'{v:.8f}'.rstrip('.0') if 0.0 < abs(v) < .1 else f'{v:,.3f}'.rstrip(',.0')
+    pd.options.display.float_format = lambda v: str(in_range(v)) if len(in_range(v)) else '0'
     pd.options.display.date_dayfirst = True
     pd.options.display.colheader_justify = 'center'
     warnings.filterwarnings(action='ignore', category=FutureWarning)
     warnings.catch_warnings()
 
 
+def str_subs(text, *args):
+    for e in args:
+        text = text.replace(*e if len(e) > 1 else (e[0], ''))
+    return text
+
+
+# noinspection PySameParameterValue
 def rg(v, format_spec=None):
     """Returns "v" as str and red or green ANSI colored depending of its sign (+ green, - red).
 
@@ -93,6 +98,7 @@ def data2num(s):
         return s
 
 
+# noinspection PySameParameterValue
 def epoch(to_str=False):
     """Return local datetime (unix epoch).
 
