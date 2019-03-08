@@ -14,22 +14,20 @@ classifiers = [
 exclude = ['.idea*', 'build*', '{}.egg-info*'.format(__package__), 'dist*', 'venv*', 'doc*', 'lab*']
 
 setup(
-        name=pcmc.__package__,
-        version=pcmc.__version__,
-        packages=find_packages(exclude=exclude),
-        entry_points={
-            'console_scripts': [
-                'pcmc = pcmc.cli:run'
-            ]
-        },
-        url=pcmc.__site__,
-        long_description=pcmc.__long_description__,
-        long_description_content_type="text/markdown",
-        license=pcmc.__license__,
-        author=pcmc.__author__,
-        author_email=pcmc.__email__,
-        description=pcmc.__description__,
-        keywords=pcmc.__keywords__,
-        classifiers=classifiers,
-        install_requires=pcmc.__dependencies__
-)
+    name=pcmc.__package__,
+    version=pcmc.__version__,
+    packages=find_packages(exclude=exclude),
+    entry_points={
+        'console_scripts': [
+            'pcmc = pcmc.cli:run'
+        ]
+    },
+    url=pcmc.__site__,
+    long_description=pcmc.__long_description__,
+    long_description_content_type="text/markdown",
+    license=pcmc.__license__,
+    author=pcmc.__author__,
+    author_email=pcmc.__email__,
+    description=pcmc.__description__,
+    keywords=pcmc.__keywords__,
+    classifiers=classifiers)
