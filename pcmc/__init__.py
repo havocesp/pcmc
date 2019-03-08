@@ -14,7 +14,7 @@ __long_description__ = __long_description__.read_text(encoding='utf-8')
 
 __project__ = 'pcmc'
 __package__ = 'pcmc'
-__version__ = '0.1.6'
+__version__ = '0.1.7'
 __license__ = 'UNLICENSE'
 __author__ = 'Daniel J. Umpierrez'
 __site__ = 'https://github.com/havocesp/{}'.format(__package__)
