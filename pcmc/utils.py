@@ -39,7 +39,7 @@ def pandas_settings(precision=8, max_width=120, max_rows=25):
 
 def str_subs(text, *args):
     for e in args:
-        text = text.replace(*e if len(e) > 1 else (e[0], ''))
+        text = text.replace(*(e if len(e) > 1 else (e[0], '')))
     return text
 
 
@@ -56,23 +56,21 @@ def rg(v, format_spec=None):
     :return str: v as str and red or green ANSI colored depending of its sign (+ green, - red)
     """
 
-    if v and isinstance(v, str):
+    if isinstance(v or 0, str):
         try:
             v = float(v)
         except ValueError:
             return v
 
-    if v and isinstance(v, nums.Number):
+    if isinstance(v or [], nums.Number):
         v = float(str(v))
         is_zero = v == 0.0
         is_neg = v < 0.0
 
-        format_spec = format_spec or '{}'
-
         try:
-            v = str(format_spec).format(v)
-        except ValueError:
-            v = '{}'.format(v)
+            v = format_spec.format(v)
+        except (ValueError, TypeError):
+            v = f'{v}'
 
         if is_zero:
             return term.format(v, term.white, term.dim)
@@ -88,12 +86,12 @@ def data2num(s):
     >>> data2num(' -2.2a0 % ')
     ' -2.2a0 % '
 
-    :param tp.AnyStr s: the str where to float number will be searched.
+    :param tp.Text s: the str where to float number will be searched.
     :return: "s" as is or float type resulted numeric value extraction from "s" content.
-    :rtype: tp.AnyStr or float
+    :rtype: tp.Text or float
     """
     try:
-        return float(str(s or '').strip(' $%').replace('?', '0').replace(',', '').strip(' *'))
+        return float(str(s).strip(' $%').replace('?', '0').replace(',', '').strip(' *'))
     except ValueError:
         return s
 
@@ -127,7 +125,7 @@ def get_url(url, retries=-1, wait_secs=15, verbose=True):
             response = response.read()
             return response.decode('utf-8')
         except InvalidURL:
-            print('{} is not a valid URL'.format(str(url)))
+            print(f'{str(url)} is not a valid URL')
             return str()
         except (HTTPException, HTTPError) as err:
             if verbose:
