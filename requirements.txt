@@ -2,3 +2,4 @@ pandas
 py-term
 tabulate
 bs4
+lxml
