@@ -22,24 +22,69 @@ from pcmc.utils import rg, epoch
 warnings.filterwarnings('ignore')
 
 
-def main(*exchanges, **kwargs):
-    timeframe = kwargs.get('timeframe', '1h').lower()
-    filter_by = kwargs.get('filter_by', 'gainers').lower()
-    loop = kwargs.get('loop', False)
-    loop_interval = kwargs.get('loop_interval', 60)
+def run():
+    cmc = CoinMarketCap()
+    exchanges_list = cmc.get_exchanges(True)
 
-    timeframe = timeframe if timeframe in st.TIMEFRAMES else '1h'
-    filter_by = filter_by if filter_by in ['losers', 'gainers'] else 'gainers'
+    parser = argparse.ArgumentParser(description='Coinmarketcap.com from CLI.')
 
+    filter_grp = parser.add_mutually_exclusive_group()
+
+    filter_grp.add_argument('-G', '--gainers',
+                            dest='filter_by',
+                            action='store_true',
+                            help='Show gainers related data.')
+    filter_grp.add_argument('-L', '--losers',
+                            dest='filter_by',
+                            action='store_false',
+                            help='Show losers related data.')
+    parser.add_argument('exchanges',
+                        choices=exchanges_list,
+                        metavar='EX',
+                        nargs='+',
+                        help='Show only currencies supported by supplied exchanges.')
+    parser.add_argument('-t', '--timeframe',
+                        default='1h',
+                        nargs='?',
+                        choices=[],
+                        help='CoinMarketCap valid timeframes are: 1h, 24h, 7d.')
+    parser.add_argument('-f', '--filter_by',
+                        choices=['gainers', 'losers'],
+                        default='filter_by',
+                        nargs='?',
+                        help='Set to "losers" to show currencies losers data (default "gainers").')
+    parser.add_argument('-l', '--loop',
+                        help='Enable "loop" behaviour (show data repeatedly at the supplied interval in seconds.',
+                        type=int,
+                        default=0,
+                        nargs='?',
+                        const=0)
+    parser.add_argument('-m', '--minvol',
+                        help='Minimum 24 hour volume amount filter.',
+                        type=float,
+                        default=0.0,
+                        nargs='?',
+                        const=0.0)
+
+    filter_grp.set_defaults(filter_by=True)
+    args = parser.parse_args(sys.argv[1:])
+
+    main(args)
+
+
+# noinspection PyUnusedFunction
+def main(args):
+    timeframe = args.timeframe if args.timeframe in st.TIMEFRAMES else '1h'
+    filter_by = args.filter_by if args.filter_by in ['losers', 'gainers'] else 'gainers'
     columns = ['symbol', 'volume24h', 'usd', 'btc', timeframe]
 
-    if len(exchanges):
+    if len(args.exchanges) > 1:
         columns.append('exchanges')
 
     rename = dict.fromkeys(columns)
 
     for col in columns:
-        rename[col] = '% {}'.format(col.upper()) if col in st.TIMEFRAMES else col.title()
+        rename[col] = f'% {col.upper()}' if col in st.TIMEFRAMES else col.title()
 
     cmd_data = None
     user_exit = False
@@ -48,12 +93,14 @@ def main(*exchanges, **kwargs):
 
     cmc = CoinMarketCap()
 
-    exchange_currencies = {ex: cmc.get_exchange_currencies(ex) for ex in exchanges}
+    # per exchange currencies supported
+    exchange_currencies = {ex: cmc.get_exchange_currencies(ex) for ex in args.exchanges}
+    # sorted and unique list of currencies
     all_currencies = list(sorted(set(sum(list(exchange_currencies.values()), []))))
 
-    while loop or cmd_data is None:
+    while args.loop or cmd_data is None:
         try:
-            data = cmc.gainers if filter_by in 'gainers' else cmc.losers
+            data = cmc.gainers if filter_by is True else cmc.losers
             if data:
                 data = data.get(timeframe)
                 data = data.set_index('symbol')  # type: pd.DataFrame
@@ -62,7 +109,9 @@ def main(*exchanges, **kwargs):
                 continue
 
             snapshots.update({epoch(True): data.copy(True)})
-
+            print(data.head())
+            data = data.query(f'volume24h > {args.minvol * 1000.0}')
+            print(data.head())
             data['btc'] = data['btc'].apply(lambda x: '{: >12.8f}'.format(x))
 
             data[timeframe] = data[timeframe].apply(lambda x: rg(float(x), '{: >+7.2f} %'))
@@ -71,13 +120,13 @@ def main(*exchanges, **kwargs):
 
             final = data[[c in all_currencies for c in data.index]]
 
-            final['exchanges'] = [','.join([e.upper() for e in exchanges if s in exchange_currencies[e]]) for s in
-                                  final.index]
+            exchanges_fmt = lambda s: [e.upper() for e in args.exchanges if s in exchange_currencies[e]]
+            final['exchanges'] = [','.join(exchanges_fmt(s)) for s in final.index]
             final = final[columns[1:]].rename(rename, axis=1)
 
             print(final)
-            hour = '{:%H:%M:%S}'.format(dt.now())
-            print('  {sep} {time} {sep}  '.format(sep=str('=' * 38), time=hour))
+            hour = f'{dt.now():%H:%M:%S}'
+            print(f'  {str("=" * 38)} {hour} {str("=" * 38)}  ')
         except IndexError as err:
             user_exit = True
             raise err
@@ -89,41 +138,7 @@ def main(*exchanges, **kwargs):
 
         finally:
             if not user_exit:
-                if not loop:
+                if args.loop > 0:
+                    time.sleep(args.loop)
+                else:
                     break
-                time.sleep(loop_interval)
-
-
-# noinspection PyUnusedFunction
-def run():
-    exchanges_list = CoinMarketCap().get_exchanges(True)
-
-    parser = argparse.ArgumentParser()
-
-    parser.add_argument('exchanges',
-                        choices=exchanges_list,
-                        metavar='EX',
-                        nargs='+',
-                        help='Show only currencies supported by supplied exchanges.')
-
-    parser.add_argument('-t', '--timeframe',
-                        default='1h',
-                        help='CoinMarketCap valid timeframes are: 1h, 24h, 7d.')
-
-    parser.add_argument('-f', '--filter_by',
-                        default='gainers',
-                        help='Set to "losers" to show currencies losers data (default "gainers").')
-
-    parser.add_argument('-l', '--loop',
-                        help='Set to "losers" to show currencies losers data (default "gainers").',
-                        action='store_true')
-    parser.add_argument('-i', '--loop-interval',
-                        type=int,
-                        default=60,
-                        help='Set to "losers" to show currencies losers data (default "gainers").')
-
-    args = parser.parse_args(sys.argv[1:])
-    args = vars(args)
-    exchanges = args.pop('exchanges')
-
-    main(*exchanges, **args)
