@@ -2,7 +2,7 @@
 
  - Author: Daniel J. Umpierrez
  - License: UNLICENSE
- - Version: 0.1.7
+ - Version: 0.1.8
 
 ## Description
 
@@ -34,6 +34,9 @@ $ pcmc --timeframe 1h --filter_by gainers hitbtc binance cryptopia
 ## Changelog
 
 Project history changes.
+
+### 0.1.8
+ - Volume filtering now working
 
 ### 0.1.7
  - Code cleanup (less lines, same result and more readable code)
