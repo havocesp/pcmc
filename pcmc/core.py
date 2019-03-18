@@ -16,7 +16,9 @@ from pcmc.utils import data2num, epoch, get_url, pandas_settings, str_subs
 
 pandas_settings()
 
+_STRIP = '@12345677890'
 _PATTERN = r'data-{}.+"[0-9]+([\.][0-9])*["]'
+_REPLACE = ('\n\n', '@'), ('\n',), ('?', '0'), (',',), ('$',), ('*',)
 
 
 # noinspection PyUnusedFunction,PySameParameterValue
@@ -206,6 +208,7 @@ class CoinMarketCap:
         """
         exchange = str(exchange).lower()
         data = cls._fetch_url(st.URL_EXCHANGES.format(exchange))
+
         if data and isinstance(data, str) and len(data):
             data = pd.read_html(data)
             data = data.pop(0)
@@ -214,8 +217,10 @@ class CoinMarketCap:
             if quote_currency:
                 quote_currency = str(quote_currency).upper()
                 markets = {s.split('/')[1] for s in cls.get_exchange_symbols(exchange)}
+
                 if quote_currency in markets:
                     symbols = symbols.select(lambda s: symbols[s].split('/')[1] in quote_currency)
+
             return symbols.sort_values().tolist()
 
     @classmethod
@@ -242,11 +247,14 @@ class CoinMarketCap:
     @classmethod
     def get_all(cls):
         if not len(cls._all_currencies):
+            names = dict()
+            final = list()
+
             data = cls._fetch_url(st.URL_ALL)
             scrapper = bs4.BeautifulSoup(data, features='lxml')
             table = scrapper.find('table', attrs={'id': 'currencies-all'})
             names_tags = scrapper.find_all('a', attrs={'class': 'link-secondary'})
-            names = dict()
+
             num = len(names_tags) // 2
 
             for i in range(0, num, 2):
@@ -254,41 +262,46 @@ class CoinMarketCap:
                 short_name = names_tags[i].text
                 names.update(**{short_name: long_name})
 
-            replaces = (('\n\n', '@'), ('\n',), ('?', '0'), (',',), ('$',), ('*',))
-            data = [str_subs(tr.text, replaces).lstrip('@12345677890').split('@')[1:8] for tr in table.find_all('tr')]
+            rows = table.find_all('tr')
+            data = [str_subs(r.text, *_REPLACE).lstrip(_STRIP).split('@')[1:8] for r in rows]
 
-            final = list()
             for row in data:
+
                 if len(row) > 5:
-                    row = [data2num(r) for r in row]
+                    row = [data2num(f) for f in row]
 
                     if isinstance(row[-1] or 0, str) and '%' in row[-1] and '?' not in row[-1]:
                         tmp = row[-1].split('%')[:3]
                         row[-1] = float(tmp.pop(0))
-                        row.extend(list(map(float, tmp)))
+                        row.extend([float(t) for t in tmp])
+
                         if row[0] == row[1]:
-                            row[0] = names.get(row[1], '').upper()
+                            k = row[1].upper()
+                            row[0] = names[k].upper() if k in names else str()
                         else:
-                            row[0] = row[0].upper() if row[0] else row[1]
+                            row[0] = str(row[0]).upper() if row[0] else row[1]
+
                         final.append(row)
 
             df = pd.DataFrame(final, columns=st.ALL_FIELDS)
 
             df = df[[True if isinstance(data2num(v), float) else False for v in df['volume24h']]]
+
             df['usd'] = df['usd'].apply(data2num)
             df['btc'] = df['usd'] / cls.get_price('BTC')
-            df['usd'] = df['usd'].round(2)
-            df['btc'] = df['btc'].round(8)
+
+            df = df.round({'usr': 2, 'btc': 8})
+
             btc = df.pop('btc')
             df.insert(2, column='btc', value=btc)
+
             df['market_cap'] = df['market_cap'].apply(data2num).apply(int)
-            df['1h'] = df['1h'].apply(data2num).round(2)
-            df['24h'] = df['24h'].apply(data2num).round(2)
-            df['7d'] = df['7d'].apply(data2num).round(2)
+            df = df.apply(data2num).round({'1h': 2, '24h': 2, '7d': 2})
             df['volume24h'] = df['volume24h'].apply(data2num).apply(int)
 
             df = df.set_index('symbol')
             cls._all_currencies = df.copy(True)
+
         return cls._all_currencies
 
     @classmethod
@@ -328,3 +341,8 @@ class CoinMarketCap:
             exchanges = exchanges.apply(str.lower)
 
         return exchanges.tolist()
+
+
+if __name__ == '__main__':
+    info = CoinMarketCap().get_all()
+    print(info.head())
