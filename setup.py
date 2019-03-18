@@ -30,4 +30,5 @@ setup(
     author_email=pcmc.__email__,
     description=pcmc.__description__,
     keywords=pcmc.__keywords__,
+    install_requires=['tabulate', 'pandas', 'bs4', 'py-term', 'lxml'],
     classifiers=classifiers)
