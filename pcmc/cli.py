@@ -100,8 +100,7 @@ def main(args):
 
     while args.loop or cmd_data is None:
         try:
-            data = cmc.gainers if filter_by is True else cmc.losers
-            if data:
+            if data := cmc.gainers if filter_by is True else cmc.losers:
                 data = data.get(timeframe)
                 data = data.set_index('symbol')  # type: pd.DataFrame
                 data.index.name = 'Symbol'
